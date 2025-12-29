@@ -7,12 +7,15 @@ import lombok.Setter;
 
 import java.time.LocalDateTime;
 
-@Getter
 @Setter
+@Getter
 @AllArgsConstructor
 @NoArgsConstructor
 public class MessageRequest {
+
     private String content;
     private String sender;
     private String roomId;
+
+
 }
