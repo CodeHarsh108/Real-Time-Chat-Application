@@ -16,10 +16,13 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Service
 @RequiredArgsConstructor
 public class ChatService {
+    private static final Logger logger = LoggerFactory.getLogger(ChatService.class);
 
     private final RoomRepository roomRepository;
 
@@ -44,6 +47,8 @@ public class ChatService {
     }
 
     public Message sendMessage(MessageRequest request) {
+        logger.info("Sending message from {} to room {}",
+                request.getSender(), request.getRoomId());
         Room room = getRoom(request.getRoomId());
 
         Message message = new Message();
