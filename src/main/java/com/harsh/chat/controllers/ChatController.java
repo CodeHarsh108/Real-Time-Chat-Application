@@ -1,89 +1,52 @@
 package com.harsh.chat.controllers;
+
+
 import com.harsh.chat.entity.Message;
+import com.harsh.chat.entity.Room;
 import com.harsh.chat.payload.MessageRequest;
-import com.harsh.chat.services.ChatService;
-import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
+import com.harsh.chat.repositories.RoomRepository;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.SendTo;
-import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RestController;
 
-@Controller
-@RequiredArgsConstructor
+import java.time.LocalDateTime;
+
+@RestController
 public class ChatController {
 
-    private final ChatService chatService;
 
-    @MessageMapping("/sendMessage/{roomId}")
-    @SendTo("/topic/room/{roomId}")
+    private RoomRepository roomRepository;
+
+    public ChatController(RoomRepository roomRepository) {
+        this.roomRepository = roomRepository;
+    }
+
+
+    //for sending and receiving messages
+    @MessageMapping("/sendMessage/{roomId}")// /app/sendMessage/roomId
+    @SendTo("/topic/room/{roomId}")//subscribe
     public Message sendMessage(
             @DestinationVariable String roomId,
-            @Valid MessageRequest request
+            @RequestBody MessageRequest request
     ) {
-        return chatService.sendMessage(request);
-    }
 
-    @MessageMapping("/userTyping/{roomId}")
-    @SendTo("/topic/typing/{roomId}")
-    public TypingNotification handleTyping(
-            @DestinationVariable String roomId,
-            TypingRequest request
-    ) {
-        return new TypingNotification(request.getUsername(), request.isTyping());
-    }
-}
+        Room room = roomRepository.findByRoomId(request.getRoomId());
+        Message message = new Message();
+        message.setContent(request.getContent());
+        message.setSender(request.getSender());
+        message.setTimeStamp(LocalDateTime.now());
+        if (room != null) {
+            room.getMessages().add(message);
+            roomRepository.save(room);
+        } else {
+            throw new RuntimeException("room not found !!");
+        }
 
-// Add Typing classes
-class TypingRequest {
-    private String username;
-    private boolean typing;
+        return message;
 
-    public TypingRequest(String username, boolean typing) {
-        this.username = username;
-        this.typing = typing;
-    }
 
-    public String getUsername() {
-        return username;
-    }
-
-    public void setUsername(String username) {
-        this.username = username;
-    }
-
-    public boolean isTyping() {
-        return typing;
-    }
-
-    public void setTyping(boolean typing) {
-        this.typing = typing;
     }
 }
-
-class TypingNotification {
-    private String username;
-    private boolean typing;
-
-    public TypingNotification(String username, boolean typing) {
-        this.username = username;
-        this.typing = typing;
-    }
-
-    public String getUsername() {
-        return username;
-    }
-
-    public void setUsername(String username) {
-        this.username = username;
-    }
-
-    public boolean isTyping() {
-        return typing;
-    }
-
-    public void setTyping(boolean typing) {
-        this.typing = typing;
-    }
-}
-

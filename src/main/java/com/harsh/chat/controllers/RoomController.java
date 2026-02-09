@@ -1,60 +1,86 @@
-// Updated RoomController.java
 package com.harsh.chat.controllers;
 
-import com.harsh.chat.dto.RoomDTO;
 import com.harsh.chat.entity.Message;
 import com.harsh.chat.entity.Room;
-import com.harsh.chat.services.ChatService;
-import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
+import com.harsh.chat.repositories.RoomRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/rooms")
-@RequiredArgsConstructor
 public class RoomController {
 
-    private final ChatService chatService;
+    private RoomRepository roomRepository;
 
-    @PostMapping
-    public ResponseEntity<Room> createRoom(@RequestBody String roomId) {
-        Room room = chatService.createRoom(roomId);
-        return ResponseEntity.status(HttpStatus.CREATED).body(room);
+
+    public RoomController(RoomRepository roomRepository) {
+        this.roomRepository = roomRepository;
     }
 
+    //create room
+    @PostMapping
+    public ResponseEntity<?> createRoom(@RequestBody Map<String, String> request) {
+        String roomId = request.get("roomId");
+
+        System.out.println("Received create room request for: " + roomId);
+
+
+        if (roomId == null || roomId.trim().isEmpty()) {
+            return ResponseEntity.badRequest().body("Room ID is required");
+        }
+
+        if (roomRepository.findByRoomId(roomId) != null) {
+            return ResponseEntity.badRequest().body("Room already exists!");
+        }
+
+        Room room = new Room();
+        room.setRoomId(roomId);
+        Room savedRoom = roomRepository.save(room);
+        return ResponseEntity.status(HttpStatus.CREATED).body(savedRoom);
+    }
+
+
+    //get room: join
     @GetMapping("/{roomId}")
-    public ResponseEntity<Room> getRoom(@PathVariable String roomId) {
-        Room room = chatService.getRoom(roomId);
+    public ResponseEntity<?> joinRoom(
+            @PathVariable String roomId
+    ) {
+
+        Room room = roomRepository.findByRoomId(roomId);
+        if (room == null) {
+            return ResponseEntity.badRequest()
+                    .body("Room not found!!");
+        }
         return ResponseEntity.ok(room);
     }
 
+
+    //get messages of room
+
     @GetMapping("/{roomId}/messages")
-    public ResponseEntity<Page<Message>> getMessages(
+    public ResponseEntity<List<Message>> getMessages(
             @PathVariable String roomId,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size
+            @RequestParam(value = "page", defaultValue = "0", required = false) int page,
+            @RequestParam(value = "size", defaultValue = "20", required = false) int size
     ) {
-        Page<Message> messages = chatService.getMessages(
-                roomId,
-                PageRequest.of(page, size)
-        );
-        return ResponseEntity.ok(messages);
+        Room room = roomRepository.findByRoomId(roomId);
+        if (room == null) {
+            return ResponseEntity.badRequest().build()
+                    ;
+        }
+        //get messages :
+        //pagination
+        List<Message> messages = room.getMessages();
+        int start = Math.max(0, messages.size() - (page + 1) * size);
+        int end = Math.min(messages.size(), start + size);
+        List<Message> paginatedMessages = messages.subList(start, end);
+        return ResponseEntity.ok(paginatedMessages);
+
     }
 
-    @GetMapping
-    public ResponseEntity<List<RoomDTO>> getAllRooms() {
-        List<RoomDTO> rooms = chatService.getAllRooms();
-        return ResponseEntity.ok(rooms);
-    }
 
-    @DeleteMapping("/{roomId}")
-    public ResponseEntity<Void> deleteRoom(@PathVariable String roomId) {
-        // Implement delete logic
-        return ResponseEntity.noContent().build();
-    }
 }
