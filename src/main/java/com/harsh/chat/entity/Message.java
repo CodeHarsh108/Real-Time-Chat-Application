@@ -1,9 +1,8 @@
-// src/main/java/com/harsh/chat/entity/Message.java
 package com.harsh.chat.entity;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.index.Indexed;
+import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.LocalDateTime;
 
@@ -11,15 +10,29 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @Getter
 @Setter
+@Builder
+@Document(collection = "messages")
 public class Message {
+
+    @Id
+    private String id;
+
+    @Indexed
+    private String roomId;
 
     private String sender;
     private String content;
-    private LocalDateTime timeStamp;
 
-    public Message(String sender, String content) {
-        this.sender = sender;
-        this.content = content;
-        this.timeStamp = LocalDateTime.now();
+
+    @Builder.Default
+    private LocalDateTime timestamp = LocalDateTime.now();
+
+    public static Message create(String roomId, String sender, String content){
+        return Message.builder()
+                .roomId(roomId)
+                .sender(sender)
+                .content(content)
+                .timestamp(LocalDateTime.now())
+                .build();
     }
 }
