@@ -15,3 +15,10 @@ logging:
   level:
     com.harsh.chat: DEBUG
     org.springframework.web: DEBUG
+
+cors:
+  allowed-origin: http://localhost:5173
+
+websocket:
+  allowed-origin: http://localhost:5173
+  heartbeat-interbal: 25000
