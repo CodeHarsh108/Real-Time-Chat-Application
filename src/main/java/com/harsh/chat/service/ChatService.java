@@ -51,10 +51,6 @@ public class ChatService {
                 .orElseThrow(() -> new RoomNotFoundException("Room not found: " + roomId));
     }
 
-    @Transactional(readOnly = true)
-    public boolean roomExists(String roomId) {
-        return roomRepository.existsByRoomId(roomId);
-    }
 
 
     @Transactional
@@ -100,5 +96,12 @@ public class ChatService {
     public long getMessageCount(String roomId) {
         return messageRepository.countByRoomId(roomId);
     }
+
+    @Transactional(readOnly = true)
+    public boolean roomExists(String roomId) {
+        return roomRepository.existsByRoomId(roomId);
+    }
+
+
 
 }
