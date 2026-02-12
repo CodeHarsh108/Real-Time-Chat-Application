@@ -2,8 +2,13 @@ package com.harsh.chat.controllers;
 
 import com.harsh.chat.entity.Message;
 import com.harsh.chat.entity.Room;
+import com.harsh.chat.payload.CreateRoomRequest;
 import com.harsh.chat.repositories.MessageRepository;
 import com.harsh.chat.repositories.RoomRepository;
+import com.harsh.chat.service.ChatService;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -19,67 +24,55 @@ import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/v1/rooms")
+@RequiredArgsConstructor
+@Slf4j
 public class RoomController {
 
-    private RoomRepository roomRepository;
-
-    private MessageRepository messageRepository;
-
-
-    public RoomController(RoomRepository roomRepository) {
-        this.roomRepository = roomRepository;
-    }
+    private final ChatService chatService;
 
     @PostMapping
-    public ResponseEntity<?> createRoom(@RequestBody Map<String, String> request) {
-        String roomId = request.get("roomId");
+    public ResponseEntity<?> createRoom(@Valid @RequestBody CreateRoomRequest request) {
+        log.info("Create room request: {}", request.getRoomId());
 
-        if (roomId == null || roomId.trim().isEmpty()) {
-            return ResponseEntity.badRequest().body("Room ID is required");
+        try {
+            Room room = chatService.createRoom(request.getRoomId());
+            return ResponseEntity.status(HttpStatus.CREATED).body(room);
+        } catch (IllegalArgumentException e) {
+            log.warn("Room creation failed: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(e.getMessage());
         }
-
-        if (roomRepository.existsByRoomId(roomId)) {
-            return ResponseEntity.badRequest().body("Room already exists!");
-        }
-
-        Room room = Room.builder()
-                .roomId(roomId)
-                .recentMessageIds(new ArrayList<>())
-                .totalMessages(0)
-                .build();
-
-        Room savedRoom = roomRepository.save(room);
-        return ResponseEntity.status(HttpStatus.CREATED).body(savedRoom);
     }
 
-
-    //get room: join
     @GetMapping("/{roomId}")
-    public ResponseEntity<?> joinRoom(
-            @PathVariable String roomId
-    ) {
+    public ResponseEntity<?> joinRoom(@PathVariable String roomId) {
+        log.debug("Join room request: {}", roomId);
 
-        Optional<Room> room = roomRepository.findByRoomId(roomId);
-        if (room == null) {
-            return ResponseEntity.badRequest()
-                    .body("Room not found!!");
+        try {
+            Room room = chatService.getRoom(roomId);
+            return ResponseEntity.ok(room);
+        } catch (Exception e) {
+            log.warn("Room not found: {}", roomId);
+            return ResponseEntity.badRequest().body("Room not found!!");
         }
-        return ResponseEntity.ok(room);
     }
-
-
 
     @GetMapping("/{roomId}/messages")
     public ResponseEntity<List<Message>> getMessages(
             @PathVariable String roomId,
-            @RequestParam(value = "page", defaultValue = "0") int page,
-            @RequestParam(value = "size", defaultValue = "20") int size
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size
     ) {
-        Pageable pageable = PageRequest.of(page, size, Sort.by("timestamp").descending());
-        Page<Message> messagePage = messageRepository.findByRoomIdOrderByTimestampDesc(roomId, pageable);
-        return ResponseEntity.ok(messagePage.getContent());
+        log.debug("Get messages request for room: {}, page: {}, size: {}", roomId, page, size);
 
+        try {
+            List<Message> messages = chatService.getMessages(roomId, page, size);
+            return ResponseEntity.ok(messages);
+        } catch (Exception e) {
+            log.warn("Failed to get messages: {}", e.getMessage());
+            return ResponseEntity.badRequest().build();
+        }
     }
+
 
 
 }
