@@ -33,10 +33,5 @@ public class ChatController {
         return MessageResponse.from(savedMessage);
     }
 
-    @MessageExceptionHandler
-    @SendToUser("/queue/errors")
-    public String handleWebSocketException(Exception exception) {
-        log.error("WebSocket error: {}", exception.getMessage());
-        return "Error: " + exception.getMessage();
-    }
+
 }

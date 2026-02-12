@@ -2,6 +2,9 @@ package com.harsh.chat.service;
 
 import com.harsh.chat.entity.Message;
 import com.harsh.chat.entity.Room;
+import com.harsh.chat.exception.InvalidRoomIdException;
+import com.harsh.chat.exception.MessageSendException;
+import com.harsh.chat.exception.RoomAlreadyExistsException;
 import com.harsh.chat.exception.RoomNotFoundException;
 import com.harsh.chat.payload.MessageRequest;
 import com.harsh.chat.repositories.MessageRepository;
@@ -29,8 +32,16 @@ public class ChatService {
     @Transactional
     public Room createRoom(String roomId) {
         log.info("Creating room with ID: {}", roomId);
+        if (roomId == null || roomId.trim().isEmpty()) {
+            throw new InvalidRoomIdException("Room ID cannot be empty");
+        }
+        if (!roomId.matches("^[a-zA-Z0-9_-]{3,50}$")) {
+            throw new InvalidRoomIdException(
+                    "Room ID must be 3-50 characters and contain only letters, numbers, hyphens, and underscores"
+            );
+        }
         if (roomRepository.existsByRoomId(roomId)) {
-            throw new IllegalArgumentException("Room already exists: " + roomId);
+            throw new RoomAlreadyExistsException(roomId);
         }
         Room room = Room.builder()
                 .roomId(roomId)
@@ -56,19 +67,29 @@ public class ChatService {
     @Transactional
     public Message saveMessage(MessageRequest request) {
         log.info("Saving message in room: {} from sender: {}", request.getRoomId(), request.getSender());
+        if (request.getContent() == null || request.getContent().trim().isEmpty()) {
+            throw new IllegalArgumentException("Message content cannot be empty");
+        }
+
         Room room = roomRepository.findByRoomId(request.getRoomId())
-                .orElseThrow(() -> new RoomNotFoundException("Room not found: " + request.getRoomId()));
+                .orElseThrow(() -> new RoomNotFoundException(request.getRoomId()));
         Message message = Message.builder()
                 .roomId(request.getRoomId())
                 .sender(request.getSender())
                 .content(request.getContent())
                 .timestamp(LocalDateTime.now())
                 .build();
-        Message savedMessage = messageRepository.save(message);
-        room.addMessage(savedMessage.getId());
-        roomRepository.save(room);
-        log.info("Message saved successfully with ID: {}", savedMessage.getId());
-        return savedMessage;
+
+        try {
+            Message savedMessage = messageRepository.save(message);
+            room.addMessage(savedMessage.getId());
+            roomRepository.save(room);
+            return savedMessage;
+        } catch (Exception e) {
+            log.error("Failed to save message in room: {}", request.getRoomId(), e);
+            throw new MessageSendException("Failed to send message", e);
+        }
+
     }
 
     @Transactional(readOnly = true)

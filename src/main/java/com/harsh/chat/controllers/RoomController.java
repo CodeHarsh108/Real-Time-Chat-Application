@@ -58,41 +58,4 @@ public class RoomController {
         return ResponseEntity.ok(response);
     }
 
-    @GetMapping("/{roomId}/exists")
-    public ResponseEntity<Boolean> checkRoomExists(@PathVariable String roomId) {
-        boolean exists = chatService.roomExists(roomId);
-        return ResponseEntity.ok(exists);
-    }
-
-
-
-    @ExceptionHandler(RoomNotFoundException.class)
-    public ResponseEntity<ErrorResponse> handleRoomNotFound(
-            RoomNotFoundException ex, WebRequest request) {
-
-        ErrorResponse error = ErrorResponse.builder()
-                .timestamp(LocalDateTime.now())
-                .status(HttpStatus.NOT_FOUND.value())
-                .error("Room Not Found")
-                .message(ex.getMessage())
-                .path(request.getDescription(false))
-                .build();
-
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
-    }
-
-    @ExceptionHandler(IllegalArgumentException.class)
-    public ResponseEntity<ErrorResponse> handleIllegalArgument(
-            IllegalArgumentException ex, WebRequest request) {
-
-        ErrorResponse error = ErrorResponse.builder()
-                .timestamp(LocalDateTime.now())
-                .status(HttpStatus.BAD_REQUEST.value())
-                .error("Bad Request")
-                .message(ex.getMessage())
-                .path(request.getDescription(false))
-                .build();
-
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
-    }
 }
