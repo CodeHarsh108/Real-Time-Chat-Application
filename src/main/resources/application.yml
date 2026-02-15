@@ -1,5 +1,7 @@
 server:
   port: 8080
+  compression:
+    enabled: true
 
 spring:
   application:
@@ -10,15 +12,22 @@ spring:
       auto-index-creation: true
   jackson:
     time-zone: UTC
+    default-property-inclusion: non_null
+
 
 logging:
   level:
     com.harsh.chat: DEBUG
     org.springframework.web: DEBUG
 
+jwt:
+  secret: ${JWT_SECRET:mySuperSecretKeyForJWTGenerationThatShouldBeAtLeast32BytesLong}
+  expiration: 86400000  # 24 hours
+  refresh-expiration: 604800000  # 7 days
+
 cors:
   allowed-origin: http://localhost:5173
 
 websocket:
   allowed-origin: http://localhost:5173
-  heartbeat-interbal: 25000
+  heartbeat-internal: 25000
