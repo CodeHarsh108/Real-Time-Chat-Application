@@ -6,6 +6,7 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
+import org.springframework.data.mongodb.core.mapping.Field;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -22,6 +23,7 @@ public class Room {
     private String id;//Mongo db : unique identifier
 
     @Indexed(unique = true)
+    @Field("room_id")
     private String roomId;
 
     @Builder.Default
@@ -35,6 +37,13 @@ public class Room {
 
     @Builder.Default
     private Integer totalMessages = 0;
+
+    public void setRoomId(String roomId) {
+        if (roomId == null || roomId.trim().isEmpty()) {
+            throw new IllegalArgumentException("Room ID cannot be null or empty");
+        }
+        this.roomId = roomId;
+    }
 
     public void addMessage(String messageId){
         this.recentMessageIds.add(0, messageId);
