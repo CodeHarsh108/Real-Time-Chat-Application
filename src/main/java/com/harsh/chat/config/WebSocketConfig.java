@@ -1,5 +1,6 @@
 package com.harsh.chat.config;
 
+import com.harsh.chat.service.JwtService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
@@ -22,7 +23,8 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     @Value("${websocket.allowed-origins:http://localhost:5173}")
     private String allowedOrigin;
 
-    private final JwtChannelInterceptor jwtChannelInterceptor;  // Inject the interceptor
+    private final JwtService jwtService;
+    private final JwtChannelInterceptor jwtChannelInterceptor;
 
     @Override
     public void configureMessageBroker(MessageBrokerRegistry config) {
@@ -52,7 +54,6 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void configureClientInboundChannel(ChannelRegistration registration) {
-        // Register the interceptor for inbound messages
         registration.interceptors(jwtChannelInterceptor);
     }
 

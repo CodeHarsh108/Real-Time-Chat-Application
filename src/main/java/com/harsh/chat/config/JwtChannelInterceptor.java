@@ -1,7 +1,6 @@
 package com.harsh.chat.config;
 
 import com.harsh.chat.service.JwtService;
-import com.harsh.chat.service.CustomUserDetailsService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.Message;
@@ -12,6 +11,7 @@ import org.springframework.messaging.support.ChannelInterceptor;
 import org.springframework.messaging.support.MessageHeaderAccessor;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -22,7 +22,7 @@ import java.util.List;
 public class JwtChannelInterceptor implements ChannelInterceptor {
 
     private final JwtService jwtService;
-    private final CustomUserDetailsService userDetailsService;  // This is now properly injected
+    private final UserDetailsService userDetailsService;
 
     @Override
     public Message<?> preSend(Message<?> message, MessageChannel channel) {
@@ -50,8 +50,6 @@ public class JwtChannelInterceptor implements ChannelInterceptor {
 
                                 accessor.setUser(authentication);
                                 log.info("WebSocket authenticated for user: {}", username);
-                            } else {
-                                log.warn("Invalid JWT token for user: {}", username);
                             }
                         }
                     } catch (Exception e) {
