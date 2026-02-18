@@ -7,17 +7,31 @@ import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.data.mongodb.repository.Query;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Set;
 
 @Repository
 public interface MessageRepository extends MongoRepository<Message, String> {
 
     Page<Message> findByRoomIdOrderByTimestampDesc(String roomId, Pageable pageable);
 
+   Set<Message> findByRoomIdOrderByTimestampDesc(String roomId);
+
+
     List<Message> findTop50ByRoomIdOrderByTimestampDesc(String roomId);
 
     long countByRoomId(String roomId);
 
     void deleteByRoomId(String roomId);
+
+    @Query("{ 'roomId': ?0, 'timestamp': { $gt: ?1 }, 'sender': { $ne: ?2 } }")
+    long countByRoomIdAndTimestampAfterAndSenderNot(String roomId, LocalDateTime timestamp, String sender);
+
+    @Query("{ 'roomId': ?0, 'readBy': { $ne: ?1 }, 'sender': { $ne: ?1 } }")
+    List<Message> findUnreadMessagesByRoom(String roomId, String username);
+
+    @Query("{ 'roomId': ?0, 'sender': ?1 }")
+    List<Message> findMessagesBySender(String roomId, String sender);
 
 }
