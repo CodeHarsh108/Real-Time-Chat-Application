@@ -2,6 +2,7 @@ package com.harsh.chat.controllers;
 
 import com.harsh.chat.entity.Attachment;
 import com.harsh.chat.entity.Message;
+import com.harsh.chat.entity.MessageStatus;
 import com.harsh.chat.payload.MessageResponse;
 import com.harsh.chat.repositories.AttachmentRepository;
 import com.harsh.chat.service.ChatService;
@@ -23,6 +24,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 
 @RestController
@@ -206,12 +208,13 @@ public class AttachmentController {
                 attachmentType = "audio";
             }
 
-            // Create message with ALL attachment fields AND content
             Message message = Message.builder()
                     .roomId(roomId)
                     .sender(username)
-                    .content(content != null ? content : "") // Save the text content
+                    .content(content != null ? content : "")
                     .timestamp(LocalDateTime.now())
+                    .sentAt(LocalDateTime.now())
+                    .status(MessageStatus.SENT)
                     .hasAttachment(true)
                     .attachmentId(attachmentId)
                     .attachmentType(attachmentType)
@@ -219,10 +222,13 @@ public class AttachmentController {
                     .attachmentUrl(attachment.getFileUrl())
                     .thumbnailUrl(attachment.getThumbnailUrl())
                     .attachmentSize(attachment.getFileSize())
+                    .readBy(new HashSet<>())
+                    .deliveredTo(new HashSet<>())
+                    .userStatus(new HashMap<>())
                     .build();
 
-            log.info("CREATED MESSAGE WITH ATTACHMENT AND TEXT: content='{}', type={}, url={}",
-                    message.getContent(), attachmentType, attachment.getFileUrl());
+            log.info("CREATED MESSAGE WITH ATTACHMENT: content='{}', status={}",
+                    message.getContent(), message.getStatus());
 
             // Save message
             Message savedMessage = chatService.saveAttachmentMessage(message);
@@ -245,7 +251,6 @@ public class AttachmentController {
                     .body(Map.of("error", e.getMessage()));
         }
     }
-
 
 
 

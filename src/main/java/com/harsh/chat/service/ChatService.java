@@ -107,41 +107,33 @@ public class ChatService {
     public Message saveMessage(MessageRequest request) {
         log.info("Saving message in room: {} from sender: {}", request.getRoomId(), request.getSender());
 
-        // Rate limiting
+        // Rate limiting: max 10 messages per minute per user per room
         String rateKey = "msg:" + request.getRoomId() + ":" + request.getSender();
-        try {
-            if (!redisService.checkRateLimit(rateKey, 10, 60)) {
-                throw new RuntimeException("Rate limit exceeded. Too many messages.");
-            }
-        } catch (Exception e) {
-            log.warn("Rate limiting failed, proceeding anyway: {}", e.getMessage());
+        if (!redisService.checkRateLimit(rateKey, 10, 60)) {
+            throw new RuntimeException("Rate limit exceeded. Too many messages.");
         }
 
         Room room = roomRepository.findByRoomId(request.getRoomId())
                 .orElseThrow(() -> new RoomNotFoundException("Room not found: " + request.getRoomId()));
 
-        Message message = Message.builder()
-                .roomId(request.getRoomId())
-                .sender(request.getSender())
-                .content(request.getContent())
-                .timestamp(LocalDateTime.now())
-                .build();
+        // 🔥 UPDATED: Use the create method with proper status
+        Message message = Message.create(
+                request.getRoomId(),
+                request.getSender(),
+                request.getContent()
+        );
 
         Message savedMessage = messageRepository.save(message);
 
-        // Update room
+        // Update room with message reference
         room.addMessage(savedMessage.getId());
         roomRepository.save(room);
 
-        // Try to cache the message (don't fail if caching fails)
-        try {
-            redisService.cacheMessage(request.getRoomId(), savedMessage);
-            redisService.cacheRoom(room);
-        } catch (Exception e) {
-            log.warn("Failed to cache message, but message was saved: {}", e.getMessage());
-        }
+        // Cache the message
+        redisService.cacheMessage(request.getRoomId(), savedMessage);
 
-        log.info("Message saved with ID: {}", savedMessage.getId());
+        log.info("Message saved with ID: {}, status: {}", savedMessage.getId(), savedMessage.getStatus());
+
         return savedMessage;
     }
 

@@ -7,10 +7,7 @@ import com.harsh.chat.payload.MessageRequest;
 import com.harsh.chat.payload.TypingIndicatorDTO;
 import com.harsh.chat.payload.MessageResponse;
 import com.harsh.chat.repositories.AttachmentRepository;
-import com.harsh.chat.service.AttachmentService;
-import com.harsh.chat.service.AuthService;
-import com.harsh.chat.service.ChatService;
-import com.harsh.chat.service.UserStatusService;
+import com.harsh.chat.service.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -25,6 +22,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import java.security.Principal;
 import java.time.LocalDateTime;
 import java.util.Map;
+import java.util.Set;
 
 @Controller
 @RequiredArgsConstructor
@@ -37,6 +35,7 @@ public class ChatController {
     private final SimpMessagingTemplate messagingTemplate;
     private final AttachmentService attachmentService;
     private final AttachmentRepository attachmentRepository;
+    private final ReadReceiptService readReceiptService;
 
     @MessageMapping("/sendMessage/{roomId}")
     @SendTo("/topic/room/{roomId}")
@@ -218,5 +217,64 @@ public class ChatController {
             return ResponseEntity.badRequest()
                     .body(Map.of("error", e.getMessage()));
         }
+    }
+
+
+    @MessageMapping("/delivered/{roomId}")
+    public void markAsDelivered(
+            @DestinationVariable String roomId,
+            @Payload Map<String, String> payload,
+            Principal principal
+    ) {
+        String username = principal.getName();
+        String messageId = payload.get("messageId");
+
+        log.debug("User {} marking message {} as delivered in room {}", username, messageId, roomId);
+
+        readReceiptService.markAsDelivered(messageId, username, roomId);
+    }
+
+    @MessageMapping("/read/{roomId}")
+    public void markAsRead(
+            @DestinationVariable String roomId,
+            @Payload Map<String, String> payload,
+            Principal principal
+    ) {
+        String username = principal.getName();
+        String messageId = payload.get("messageId");
+
+        log.debug("User {} marking message {} as read in room {}", username, messageId, roomId);
+
+        readReceiptService.markAsRead(messageId, username, roomId);
+    }
+
+    @MessageMapping("/read/bulk/{roomId}")
+    public void markBulkAsRead(
+            @DestinationVariable String roomId,
+            @Payload Map<String, Set<String>> payload,
+            Principal principal
+    ) {
+        String username = principal.getName();
+        Set<String> messageIds = payload.get("messageIds");
+
+        log.debug("User {} marking {} messages as read in room {}", username, messageIds.size(), roomId);
+
+        readReceiptService.markBulkAsRead(messageIds, username, roomId);
+    }
+
+    @MessageMapping("/unread/{roomId}")
+    @SendToUser("/queue/unread")
+    public Map<String, Object> getUnreadCount(
+            @DestinationVariable String roomId,
+            Principal principal
+    ) {
+        String username = principal.getName();
+        long count = readReceiptService.getUnreadCount(username, roomId);
+
+        return Map.of(
+                "roomId", roomId,
+                "unreadCount", count,
+                "timestamp", System.currentTimeMillis()
+        );
     }
 }
