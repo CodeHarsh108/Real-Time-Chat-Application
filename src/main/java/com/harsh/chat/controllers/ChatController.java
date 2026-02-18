@@ -1,21 +1,29 @@
 package com.harsh.chat.controllers;
 
+import com.harsh.chat.entity.Attachment;
 import com.harsh.chat.entity.Message;
 import com.harsh.chat.entity.User;
 import com.harsh.chat.payload.MessageRequest;
 import com.harsh.chat.payload.TypingIndicatorDTO;
 import com.harsh.chat.payload.MessageResponse;
+import com.harsh.chat.repositories.AttachmentRepository;
+import com.harsh.chat.service.AttachmentService;
 import com.harsh.chat.service.AuthService;
 import com.harsh.chat.service.ChatService;
 import com.harsh.chat.service.UserStatusService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.handler.annotation.*;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.messaging.simp.annotation.SendToUser;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 
 import java.security.Principal;
+import java.time.LocalDateTime;
 import java.util.Map;
 
 @Controller
@@ -27,6 +35,8 @@ public class ChatController {
     private final AuthService authService;
     private final UserStatusService userStatusService;
     private final SimpMessagingTemplate messagingTemplate;
+    private final AttachmentService attachmentService;
+    private final AttachmentRepository attachmentRepository;
 
     @MessageMapping("/sendMessage/{roomId}")
     @SendTo("/topic/room/{roomId}")
@@ -137,5 +147,76 @@ public class ChatController {
                 principal != null ? principal.getName() : "anonymous",
                 exception.getMessage());
         return "Error: " + exception.getMessage();
+    }
+
+    @PostMapping("/send")
+    public ResponseEntity<?> sendAttachmentMessage(
+            @RequestBody Map<String, Object> payload,
+            Authentication authentication
+    ) {
+        String username = authentication.getName();
+        String attachmentId = (String) payload.get("attachmentId");
+        String roomId = (String) payload.get("roomId");
+        String content = (String) payload.get("content");
+
+        log.info("Sending attachment message: attachmentId={}, roomId={}, user={}",
+                attachmentId, roomId, username);
+
+        try {
+            // Get attachment
+            Attachment attachment = attachmentService.getAttachment(attachmentId);
+
+            // Determine attachment type
+            String attachmentType = "document";
+            if (attachment.getFileType().startsWith("image/")) {
+                attachmentType = "image";
+            } else if (attachment.getFileType().startsWith("video/")) {
+                attachmentType = "video";
+            } else if (attachment.getFileType().startsWith("audio/")) {
+                attachmentType = "audio";
+            }
+
+            // Create message with ALL attachment fields
+            Message message = Message.builder()
+                    .roomId(roomId)
+                    .sender(username)
+                    .content(content != null ? content : "")
+                    .timestamp(LocalDateTime.now())
+                    .hasAttachment(true)
+                    .attachmentId(attachmentId)
+                    .attachmentType(attachmentType)
+                    .attachmentName(attachment.getFileName())
+                    .attachmentUrl(attachment.getFileUrl())
+                    .thumbnailUrl(attachment.getThumbnailUrl())
+                    .attachmentSize(attachment.getFileSize())
+                    .build();
+
+            log.info("CREATED MESSAGE WITH ATTACHMENT: type={}, url={}, name={}",
+                    attachmentType, attachment.getFileUrl(), attachment.getFileName());
+
+            // Save message
+            Message savedMessage = chatService.saveAttachmentMessage(message);
+
+            // Link attachment to message
+            attachment.setMessageId(savedMessage.getId());
+            attachmentRepository.save(attachment);
+
+            // Create response with ALL fields
+            MessageResponse response = MessageResponse.from(savedMessage);
+
+            // Log what we're broadcasting
+            log.info("BROADCASTING: hasAttachment={}, type={}, url={}",
+                    response.isHasAttachment(), response.getAttachmentType(), response.getAttachmentUrl());
+
+            // Broadcast via WebSocket
+            messagingTemplate.convertAndSend("/topic/room/" + roomId, response);
+
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            log.error("Failed to send attachment message: {}", e.getMessage(), e);
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error", e.getMessage()));
+        }
     }
 }

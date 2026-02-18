@@ -38,13 +38,22 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/auth/register").permitAll()
                         .requestMatchers("/api/v1/auth/login").permitAll()
                         .requestMatchers("/api/v1/auth/refresh").permitAll()
-                        .requestMatchers("/ws/**").permitAll() // WebSocket handshake
-                        .requestMatchers("/chat/**").permitAll() // WebSocket endpoint
+
+                        // WebSocket endpoints
+                        .requestMatchers("/ws/**").permitAll()
+                        .requestMatchers("/chat/**").permitAll()
+
+                        .requestMatchers("/api/v1/attachments/view/**").permitAll()
+                        .requestMatchers("/api/files/**").permitAll()
+                        .requestMatchers("/uploads/**").permitAll()
+
                         .requestMatchers("/error").permitAll()
 
                         // Protected endpoints - require authentication
                         .requestMatchers("/api/v1/rooms/**").authenticated()
                         .requestMatchers("/api/v1/rooms/*/messages").authenticated()
+                        .requestMatchers("/api/v1/attachments/upload").authenticated()
+                        .requestMatchers("/api/v1/attachments/send").authenticated()
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session

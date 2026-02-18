@@ -27,12 +27,22 @@ public class Message {
     @Builder.Default
     private LocalDateTime timestamp = LocalDateTime.now();
 
+    private String attachmentId;
+    private boolean hasAttachment;
+    private String attachmentType;  // "image", "video", "audio", "document", "other"
+    private String attachmentName;
+    private String attachmentUrl;
+    private String thumbnailUrl;
+    private Long attachmentSize;
+
     public static Message create(String roomId, String sender, String content){
         return Message.builder()
                 .roomId(roomId)
                 .sender(sender)
                 .content(content)
                 .timestamp(LocalDateTime.now())
+                .hasAttachment(false)
                 .build();
     }
+
 }

@@ -13,6 +13,48 @@ spring:
   jackson:
     time-zone: UTC
     default-property-inclusion: non_null
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 50MB
+      enabled: true
+      file-size-threshold: 2KB
+      location: ${java.io.tmpdir}
+
+file:
+  upload-dir: ./uploads
+  allowed-types:
+    - image/jpeg
+    - image/png
+    - image/gif
+    - image/webp
+    - image/jpg
+    - video/mp4
+    - video/webm
+    - video/quicktime
+    - video/x-msvideo
+    - video/x-matroska
+    - audio/mpeg
+    - audio/wav
+    - audio/ogg
+    - audio/webm
+    - application/pdf
+    - application/msword
+    - application/vnd.openxmlformats-officedocument.wordprocessingml.document
+    - application/vnd.ms-excel
+    - application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+    - application/vnd.ms-powerpoint
+    - application/vnd.openxmlformats-officedocument.presentationml.presentation
+    - text/plain
+    - text/csv
+    - application/zip
+    - application/x-zip-compressed
+    - application/octet-stream
+    - application/x-7z-compressed
+    - application/x-rar-compressed
+  max-size: 52428800
+  thumbnail-size: 200
+
 
 
 logging:

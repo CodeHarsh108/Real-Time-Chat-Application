@@ -230,7 +230,33 @@ public class ChatService {
         return redisService.getOnlineUsers();
     }
 
+    @Transactional
+    public Message saveAttachmentMessage(Message message) {
+        log.info("Saving attachment message in room: {} from sender: {}",
+                message.getRoomId(), message.getSender());
 
+        // Verify room exists
+        Room room = roomRepository.findByRoomId(message.getRoomId())
+                .orElseThrow(() -> new RoomNotFoundException("Room not found: " + message.getRoomId()));
 
+        // Save message - this should preserve ALL fields
+        Message savedMessage = messageRepository.save(message);
 
+        // LOG ALL FIELDS to verify they're saved
+        log.info("MESSAGE SAVED - ID: {}, hasAttachment: {}, type: {}, url: {}, name: {}",
+                savedMessage.getId(),
+                savedMessage.isHasAttachment(),
+                savedMessage.getAttachmentType(),
+                savedMessage.getAttachmentUrl(),
+                savedMessage.getAttachmentName());
+
+        // Update room with message reference
+        room.addMessage(savedMessage.getId());
+        roomRepository.save(room);
+
+        // Cache the message
+        redisService.cacheMessage(message.getRoomId(), savedMessage);
+
+        return savedMessage;
+    }
 }
