@@ -1,5 +1,6 @@
 package com.harsh.chat.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.harsh.chat.entity.Message;
 import com.harsh.chat.entity.Room;
 import com.harsh.chat.entity.User;
@@ -17,27 +18,52 @@ import java.util.stream.Collectors;
 @Slf4j
 public class RedisService {
     private final RedisTemplate<String, Object> redisTemplate;
+    private final ObjectMapper objectMapper;
 
     private static final String MESSAGE_KEY_PREFIX = "message:";
     private static final String RECENT_MESSAGES_KEY_PREFIX = "recent:messages:";
     private static final String ROOM_KEY_PREFIX = "room:";
     private static final String USER_KEY_PREFIX = "user:";
     private static final String ONLINE_USERS_KEY = "online:users";
+    private static final String ROOM_USERS_PREFIX = "room:users:";
+    private static final String USER_ROOM_PREFIX = "user:room:";
+    private static final String USER_TYPING_PREFIX = "typing:";
+    private static final String USER_LAST_SEEN_PREFIX = "lastseen:";
 
-    public void cacheMessage(String roomID, Message message){
-        try{
+    private <T> T safeCast(Object obj, Class<T> clazz) {
+        if (obj == null) return null;
+        if (clazz.isInstance(obj)) {
+            return clazz.cast(obj);
+        }
+        // Try to convert using Jackson if it's a LinkedHashMap
+        try {
+            return objectMapper.convertValue(obj, clazz);
+        } catch (Exception e) {
+            log.error("Failed to convert object to {}: {}", clazz.getSimpleName(), e.getMessage());
+            return null;
+        }
+    }
+
+    public void cacheMessage(String roomId, Message message) {
+        try {
             String key = MESSAGE_KEY_PREFIX + message.getId();
             redisTemplate.opsForValue().set(key, message, 1, TimeUnit.HOURS);
 
-            String recentKey = RECENT_MESSAGES_KEY_PREFIX + roomID;
+            // Add to recent messages list
+            String recentKey = RECENT_MESSAGES_KEY_PREFIX + roomId;
             redisTemplate.opsForList().leftPush(recentKey, message);
-            redisTemplate.opsForList().trim(recentKey, 0 , 49);
+            // Keep only last 50 messages
+            redisTemplate.opsForList().trim(recentKey, 0, 49);
+            // Set expiry on recent messages list
             redisTemplate.expire(recentKey, 5, TimeUnit.MINUTES);
-            log.debug("Cached message: {} for room: {}", message.getId(), roomID);
-        }catch (Exception e){
+
+            log.debug("Cached message: {} for room: {}", message.getId(), roomId);
+        } catch (Exception e) {
             log.error("Failed to cache message: {}", e.getMessage());
         }
     }
+
+
 
     public List<Message> getRecentMessages(String roomId) {
         try {
@@ -45,11 +71,15 @@ public class RedisService {
             List<Object> messages = redisTemplate.opsForList().range(recentKey, 0, 49);
 
             if (messages != null && !messages.isEmpty()) {
-                log.debug("Retrieved {} messages from cache for room: {}", messages.size(), roomId);
-                return messages.stream()
-                        .filter(obj -> obj instanceof Message)
-                        .map(obj -> (Message) obj)
-                        .collect(Collectors.toList());
+                List<Message> result = new ArrayList<>();
+                for (Object obj : messages) {
+                    Message msg = safeCast(obj, Message.class);
+                    if (msg != null) {
+                        result.add(msg);
+                    }
+                }
+                log.debug("Retrieved {} messages from cache for room: {}", result.size(), roomId);
+                return result;
             }
         } catch (Exception e) {
             log.error("Failed to get recent messages from cache: {}", e.getMessage());
@@ -71,29 +101,22 @@ public class RedisService {
         return null;
     }
 
-    public void cacheRoom(Room room) {
-        try {
-            String key = ROOM_KEY_PREFIX + room.getRoomId();
-            redisTemplate.opsForValue().set(key, room, 10, TimeUnit.MINUTES);
-            log.debug("Cached room: {}", room.getRoomId());
-        } catch (Exception e) {
-            log.error("Failed to cache room: {}", e.getMessage());
-        }
-    }
-
     public Room getCachedRoom(String roomId) {
         try {
             String key = ROOM_KEY_PREFIX + roomId;
-            Object room = redisTemplate.opsForValue().get(key);
-            if (room instanceof Room) {
+            Object obj = redisTemplate.opsForValue().get(key);
+            Room room = safeCast(obj, Room.class);
+            if (room != null) {
                 log.debug("Retrieved room from cache: {}", roomId);
-                return (Room) room;
+                return room;
             }
         } catch (Exception e) {
             log.error("Failed to get cached room: {}", e.getMessage());
         }
         return null;
     }
+
+
 
     public boolean isRoomCached(String roomId) {
         try {
@@ -160,6 +183,16 @@ public class RedisService {
         }
     }
 
+    public void cacheRoom(Room room) {
+        try {
+            String key = ROOM_KEY_PREFIX + room.getRoomId();
+            redisTemplate.opsForValue().set(key, room, 10, TimeUnit.MINUTES);
+            log.debug("Cached room: {}", room.getRoomId());
+        } catch (Exception e) {
+            log.error("Failed to cache room: {}", e.getMessage());
+        }
+    }
+
     public Set<Object> getOnlineUsers() {
         try {
             Set<Object> users = redisTemplate.opsForSet().members(ONLINE_USERS_KEY);
@@ -204,19 +237,22 @@ public class RedisService {
 
     public void clearRoomCache(String roomId) {
         try {
-            // Delete recent messages
             String recentKey = RECENT_MESSAGES_KEY_PREFIX + roomId;
-            redisTemplate.delete(recentKey);
-
-            // Delete room info
             String roomKey = ROOM_KEY_PREFIX + roomId;
+            String typingKey = USER_TYPING_PREFIX + roomId;
+            String roomUsersKey = ROOM_USERS_PREFIX + roomId;
+
+            redisTemplate.delete(recentKey);
             redisTemplate.delete(roomKey);
+            redisTemplate.delete(typingKey);
+            redisTemplate.delete(roomUsersKey);
 
             log.debug("Cleared cache for room: {}", roomId);
         } catch (Exception e) {
             log.error("Failed to clear room cache: {}", e.getMessage());
         }
     }
+
 
     public Map<String, Long> getCacheStats() {
         Map<String, Long> stats = new HashMap<>();

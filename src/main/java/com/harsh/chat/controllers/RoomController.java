@@ -6,6 +6,7 @@ import com.harsh.chat.payload.CreateRoomRequest;
 import com.harsh.chat.payload.MessageResponse;
 import com.harsh.chat.payload.RoomResponse;
 import com.harsh.chat.service.ChatService;
+import com.harsh.chat.service.UserStatusService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -15,6 +16,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @RestController
@@ -24,6 +27,8 @@ import java.util.stream.Collectors;
 public class RoomController {
 
     private final ChatService chatService;
+
+    private final UserStatusService userStatusService;
 
     @PostMapping
     public ResponseEntity<RoomResponse> createRoom(
@@ -71,5 +76,44 @@ public class RoomController {
     public ResponseEntity<Boolean> checkRoomExists(@PathVariable String roomId) {
         boolean exists = chatService.roomExists(roomId);
         return ResponseEntity.ok(exists);
+    }
+
+    @GetMapping("/{roomId}/users/online")
+    public ResponseEntity<?> getOnlineUsersInRoom(@PathVariable String roomId) {
+        log.debug("REST request for online users in room: {}", roomId);
+
+        Set<String> onlineUsers = userStatusService.getOnlineUsersInRoom(roomId);
+        Long count = userStatusService.getOnlineUsersCount(roomId);
+
+        return ResponseEntity.ok(Map.of(
+                "roomId", roomId,
+                "users", onlineUsers,
+                "count", count
+        ));
+    }
+
+    @GetMapping("/{roomId}/users/{username}/online")
+    public ResponseEntity<?> isUserOnline(
+            @PathVariable String roomId,
+            @PathVariable String username
+    ) {
+        boolean isOnline = userStatusService.isUserOnlineInRoom(username, roomId);
+
+        return ResponseEntity.ok(Map.of(
+                "username", username,
+                "roomId", roomId,
+                "online", isOnline
+        ));
+    }
+
+    @GetMapping("/{roomId}/typing")
+    public ResponseEntity<?> getUsersTyping(@PathVariable String roomId) {
+        Set<String> typingUsers = userStatusService.getUsersTyping(roomId);
+
+        return ResponseEntity.ok(Map.of(
+                "roomId", roomId,
+                "typing", typingUsers,
+                "count", typingUsers.size()
+        ));
     }
 }
