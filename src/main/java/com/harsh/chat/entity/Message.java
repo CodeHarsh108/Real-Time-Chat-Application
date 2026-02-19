@@ -1,5 +1,6 @@
 package com.harsh.chat.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -72,6 +73,12 @@ public class Message {
     @Builder.Default
     private Map<String, Integer> reactionCounts = new HashMap<>(); // emoji -> count
 
+
+    // Encryption
+//    private boolean isEncrypted;
+//    private String encryptedContent; // Store encrypted content
+//    private String encryptionIv;      // Initialization vector
+
     public static Message create(String roomId, String sender, String content) {
         return Message.builder()
                 .roomId(roomId)
@@ -108,6 +115,8 @@ public class Message {
         }
         return false;
     }
+
+
 
     /**
      * Remove a reaction from this message
@@ -150,6 +159,7 @@ public class Message {
     /**
      * Get all reactions summary
      */
+    @JsonIgnore
     public Map<String, Object> getReactionsSummary() {
         Map<String, Object> summary = new HashMap<>();
         summary.put("counts", reactionCounts);
@@ -187,6 +197,7 @@ public class Message {
     /**
      * Get thread info
      */
+    @JsonIgnore
     public Map<String, Object> getThreadInfo() {
         Map<String, Object> info = new HashMap<>();
         info.put("hasReplies", hasReplies);
@@ -224,4 +235,28 @@ public class Message {
     public boolean isDeliveredTo(String username) {
         return this.deliveredTo.contains(username);
     }
+
+//    public static Message createEncrypted(String roomId, String sender, String encryptedContent, String iv) {
+//        return Message.builder()
+//                .roomId(roomId)
+//                .sender(sender)
+//                .isEncrypted(true)
+//                .encryptedContent(encryptedContent)
+//                .encryptionIv(iv)
+//                .timestamp(LocalDateTime.now())
+//                .sentAt(LocalDateTime.now())
+//                .status(MessageStatus.SENT)
+//                .hasAttachment(false)
+//                .readBy(new HashSet<>())
+//                .deliveredTo(new HashSet<>())
+//                .userStatus(new HashMap<>())
+//                .reactions(new HashMap<>())
+//                .reactionCounts(new HashMap<>())
+//                .replyIds(new HashSet<>())
+//                .hasReplies(false)
+//                .replyCount(0)
+//                .build();
+//    }
+
+
 }

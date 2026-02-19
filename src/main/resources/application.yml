@@ -104,3 +104,8 @@ management:
   endpoint:
     health:
       show-details: always
+
+encryption:
+  master-key: ${ENCRYPTION_MASTER_KEY:MySuperSecretMasterKeyForEncryption2026!ChangeThisInProduction}
+  algorithm: AES/GCM/NoPadding
+  key-size: 256

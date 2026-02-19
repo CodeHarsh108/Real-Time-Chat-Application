@@ -54,6 +54,9 @@ public class MessageResponse {
     // Preview for reply
     private MessagePreview parentPreview;
 
+    private boolean isEncrypted;
+    private String encryptionType;
+
     @Data
     @Builder
     @NoArgsConstructor
@@ -98,6 +101,7 @@ public class MessageResponse {
                 .replyCount(message.getReplyCount())
                 .replyIds(message.getReplyIds())
                 .isReply(message.isReply());
+
 
         if (currentUser != null) {
             builder.userReaction(message.getUserReaction(currentUser));

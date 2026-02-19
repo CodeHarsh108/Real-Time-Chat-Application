@@ -73,11 +73,19 @@ public class RedisService {
             if (messages != null && !messages.isEmpty()) {
                 List<Message> result = new ArrayList<>();
                 for (Object obj : messages) {
-                    Message msg = safeCast(obj, Message.class);
-                    if (msg != null) {
-                        result.add(msg);
+                    if (obj instanceof Message) {
+                        result.add((Message) obj);
+                    } else {
+                        try {
+                            String json = objectMapper.writeValueAsString(obj);
+                            Message msg = objectMapper.readValue(json, Message.class);
+                            result.add(msg);
+                        } catch (Exception ex) {
+                            log.warn("Failed to deserialize message from cache: {}", ex.getMessage());
+                        }
                     }
                 }
+
                 log.debug("Retrieved {} messages from cache for room: {}", result.size(), roomId);
                 return result;
             }

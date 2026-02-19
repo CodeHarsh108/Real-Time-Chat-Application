@@ -38,6 +38,10 @@ public class Room {
     @Builder.Default
     private Integer totalMessages = 0;
 
+//    private String encryptedKey; // Room key encrypted with master key
+//
+//    private boolean isEncrypted;
+
     public void setRoomId(String roomId) {
         if (roomId == null || roomId.trim().isEmpty()) {
             throw new IllegalArgumentException("Room ID cannot be null or empty");

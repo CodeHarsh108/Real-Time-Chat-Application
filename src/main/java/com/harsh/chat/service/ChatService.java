@@ -10,11 +10,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,7 +30,7 @@ public class ChatService {
     private final RoomRepository roomRepository;
     private final MessageRepository messageRepository;
     private final RedisService redisService;
-    private final RedisTemplate redisTemplate;
+    private final EncryptionService encryptionService;
 
     @Transactional
     public Room createRoom(String roomId) {
@@ -41,6 +39,14 @@ public class ChatService {
         if (roomRepository.existsByRoomId(roomId)) {
             throw new IllegalArgumentException("Room already exists: " + roomId);
         }
+
+//        String encryptedKey = null;
+//        try {
+//            encryptedKey = encryptionService.generateRoomKey(roomId);
+//            log.info("Encryption key generated for room: {}", roomId);
+//        } catch (Exception e) {
+//            log.warn("Failed to generate encryption key, continuing without encryption: {}", e.getMessage());
+//        }
 
         Room room = Room.builder()
                 .roomId(roomId)
@@ -116,7 +122,38 @@ public class ChatService {
         Room room = roomRepository.findByRoomId(request.getRoomId())
                 .orElseThrow(() -> new RoomNotFoundException("Room not found: " + request.getRoomId()));
 
-        // 🔥 UPDATED: Use the create method with proper status
+
+//        // Try to encrypt if room is encrypted
+//        if (room.isEncrypted()) {
+//            try {
+//                String encryptedMessage = encryptionService.encryptMessage(request.getContent(), request.getRoomId());
+//                String[] parts = encryptedMessage.split(":");
+//                String iv = parts[0];
+//                String encryptedContent = parts[1];
+//
+//                message = Message.createEncrypted(
+//                        request.getRoomId(),
+//                        request.getSender(),
+//                        encryptedContent,
+//                        iv
+//                );
+//                log.debug("Message encrypted for room: {}", request.getRoomId());
+//            } catch (Exception e) {
+//                log.error("Encryption failed, falling back to plain text: {}", e.getMessage());
+//                message = Message.create(
+//                        request.getRoomId(),
+//                        request.getSender(),
+//                        request.getContent()
+//                );
+//            }
+//        } else {
+//            message = Message.create(
+//                    request.getRoomId(),
+//                    request.getSender(),
+//                    request.getContent()
+//            );
+//        }
+
         Message message = Message.create(
                 request.getRoomId(),
                 request.getSender(),
@@ -142,40 +179,24 @@ public class ChatService {
     public List<Message> getMessages(String roomId, int page, int size) {
         log.debug("Fetching messages for room: {}, page: {}, size: {}", roomId, page, size);
 
-        // For page 0, try cache first with error handling
-        if (page == 0) {
-            try {
-                List<Message> cachedMessages = redisService.getRecentMessages(roomId);
-                if (!cachedMessages.isEmpty()) {
-                    log.info("Returning {} messages from cache for room: {}", cachedMessages.size(), roomId);
-
-                    if (cachedMessages.size() >= size) {
-                        return cachedMessages.subList(0, Math.min(size, cachedMessages.size()));
-                    }
-                }
-            } catch (Exception e) {
-                log.warn("Failed to get messages from cache: {}", e.getMessage());
-            }
-        }
-
-        // Fallback to database
-        if (!roomRepository.existsByRoomId(roomId)) {
-            throw new RoomNotFoundException("Room not found: " + roomId);
-        }
-
         Pageable pageable = PageRequest.of(page, size, Sort.by("timestamp").descending());
-        Page<Message> messagesPage = messageRepository.findByRoomIdOrderByTimestampDesc(roomId, pageable);
+        List<Message> messages = messageRepository.findByRoomIdOrderByTimestampDesc(roomId, pageable).getContent();
 
-        List<Message> messages = messagesPage.getContent();
-
-        // Try to cache messages for future requests
-        if (page == 0 && !messages.isEmpty()) {
-            try {
-                messages.forEach(msg -> redisService.cacheMessage(roomId, msg));
-            } catch (Exception e) {
-                log.warn("Failed to cache messages: {}", e.getMessage());
-            }
-        }
+        // 🔥 FIX: Decrypt messages if needed
+//        for (Message message : messages) {
+//            if (message.isEncrypted()) {
+//                try {
+//                    String encryptedMessage = message.getEncryptionIv() + ":" + message.getEncryptedContent();
+//                    log.debug("Decrypting message {} with IV: {}", message.getId(), message.getEncryptionIv());
+//                    String decrypted = encryptionService.decryptMessage(encryptedMessage, roomId);
+//                    message.setContent(decrypted);
+//                    log.debug("Successfully decrypted message: {}", message.getId());
+//                } catch (Exception e) {
+//                    log.error("Failed to decrypt message: {}", message.getId(), e);
+//                    message.setContent("[Encrypted message - Unable to decrypt]");
+//                }
+//            }
+//        }
 
         return messages;
     }
@@ -230,6 +251,20 @@ public class ChatService {
         // Verify room exists
         Room room = roomRepository.findByRoomId(message.getRoomId())
                 .orElseThrow(() -> new RoomNotFoundException("Room not found: " + message.getRoomId()));
+
+//        if (room.isEncrypted() && message.getContent() != null && !message.getContent().isEmpty()) {
+//            try {
+//                String encryptedMessage = encryptionService.encryptMessage(message.getContent(), message.getRoomId());
+//                String[] parts = encryptedMessage.split(":");
+//                message.setEncryptedContent(parts[1]);
+//                message.setEncryptionIv(parts[0]);
+//                message.setContent(null);
+//                message.setEncrypted(true);
+//            } catch (Exception e) {
+//                log.error("Failed to encrypt attachment message content: {}", e.getMessage());
+//            }
+//        }
+
 
         // Save message - this should preserve ALL fields
         Message savedMessage = messageRepository.save(message);
