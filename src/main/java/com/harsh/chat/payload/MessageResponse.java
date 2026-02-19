@@ -8,6 +8,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.Map;
 import java.util.Set;
 
 @Data
@@ -20,6 +21,7 @@ public class MessageResponse {
     private String content;
     private LocalDateTime timestamp;
 
+    // Attachment fields
     private boolean hasAttachment;
     private String attachmentType;
     private String attachmentName;
@@ -27,6 +29,7 @@ public class MessageResponse {
     private String thumbnailUrl;
     private Long attachmentSize;
 
+    // Read Receipts Fields
     private MessageStatus status;
     private LocalDateTime sentAt;
     private LocalDateTime deliveredAt;
@@ -35,8 +38,41 @@ public class MessageResponse {
     private Set<String> deliveredTo;
     private int totalRecipients;
 
+    // Reactions Fields
+    private Map<String, Set<String>> reactions;
+    private Map<String, Integer> reactionCounts;
+    private int totalReactions;
+    private String userReaction;
+
+    //  Thread Fields
+    private String parentMessageId;
+    private boolean hasReplies;
+    private int replyCount;
+    private Set<String> replyIds;
+    private boolean isReply;
+
+    // Preview for reply
+    private MessagePreview parentPreview;
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class MessagePreview {
+        private String id;
+        private String sender;
+        private String content;
+        private boolean hasAttachment;
+        private String attachmentType;
+        private String attachmentName;
+    }
+
     public static MessageResponse from(Message message) {
-        return MessageResponse.builder()
+        return from(message, null);
+    }
+
+    public static MessageResponse from(Message message, String currentUser) {
+        MessageResponseBuilder builder = MessageResponse.builder()
                 .id(message.getId())
                 .sender(message.getSender())
                 .content(message.getContent())
@@ -54,7 +90,19 @@ public class MessageResponse {
                 .readBy(message.getReadBy())
                 .deliveredTo(message.getDeliveredTo())
                 .totalRecipients(message.getReadBy().size() + 1)
-                .build();
-    }
+                .reactions(message.getReactions())
+                .reactionCounts(message.getReactionCounts())
+                .totalReactions(message.getReactionCounts().values().stream().mapToInt(Integer::intValue).sum())
+                .parentMessageId(message.getParentMessageId())
+                .hasReplies(message.isHasReplies())
+                .replyCount(message.getReplyCount())
+                .replyIds(message.getReplyIds())
+                .isReply(message.isReply());
 
+        if (currentUser != null) {
+            builder.userReaction(message.getUserReaction(currentUser));
+        }
+
+        return builder.build();
+    }
 }
