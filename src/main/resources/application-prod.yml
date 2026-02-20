@@ -1,0 +1,98 @@
+# ============================================
+# PRODUCTION CONFIGURATION - DO NOT MODIFY LOCALLY
+# ============================================
+
+# Server Configuration
+server:
+  # ${PORT} is provided by Render/Hosting platform automatically
+  port: ${PORT:8080}
+  compression:
+    enabled: true                     # Compress responses for faster loading
+    mime-types: text/html,text/xml,text/plain,text/css,text/javascript,application/javascript,application/json
+    min-response-size: 1024           # Only compress responses > 1KB
+
+# Spring Boot Configuration
+spring:
+  application:
+    name: quicktalk
+
+  # MongoDB Configuration - All values come from environment variables
+  data:
+    mongodb:
+      uri: ${MONGODB_URI}              # Required: Your MongoDB Atlas connection string
+      auto-index-creation: true
+
+  # File Upload Configuration
+  servlet:
+    multipart:
+      max-file-size: 50MB               # Maximum file size for uploads
+      max-request-size: 50MB            # Maximum request size
+      enabled: true
+      file-size-threshold: 2KB           # Threshold after which files are written to disk
+      location: /tmp                     # Use /tmp for cloud deployments
+
+# JWT Configuration - All secrets from environment
+jwt:
+  secret: ${JWT_SECRET}                  # Required: Your JWT secret key
+  expiration: 86400000                    # 24 hours in milliseconds
+  refresh-expiration: 604800000           # 7 days in milliseconds
+
+# Redis Configuration for Caching
+redis:
+  host: ${REDIS_HOST:localhost}           # Redis host (from environment)
+  port: ${REDIS_PORT:6379}                 # Redis port
+  password: ${REDIS_PASSWORD:}              # Redis password (if any)
+  timeout: 2000ms                           # Connection timeout
+  lettuce:
+    pool:
+      max-active: 8                          # Maximum connections
+      max-idle: 8                             # Maximum idle connections
+      min-idle: 0                              # Minimum idle connections
+      max-wait: -1ms                            # Maximum wait time for connection
+
+# CORS Configuration - Allow your frontend domain
+cors:
+  allowed-origins: ${CORS_ALLOWED_ORIGINS}    # Your frontend URL (e.g., https://quicktalk.vercel.app)
+
+# File Storage - Use /tmp for cloud deployments (ephemeral storage)
+file:
+  upload-dir: /tmp/uploads                     # Files will be stored here temporarily
+  max-size: 52428800                            # 50MB in bytes
+  thumbnail-size: 200                            # Thumbnail dimension in pixels
+  allowed-types:                                  # Allowed MIME types
+    - image/jpeg
+    - image/png
+    - image/gif
+    - image/webp
+    - image/jpg
+    - video/mp4
+    - video/webm
+    - video/quicktime
+    - audio/mpeg
+    - audio/wav
+    - audio/ogg
+    - application/pdf
+    - application/msword
+    - application/vnd.openxmlformats-officedocument.wordprocessingml.document
+    - text/plain
+    - application/zip
+
+# Encryption Configuration
+encryption:
+  master-key: ${ENCRYPTION_MASTER_KEY}         # Your master key for E2EE
+  enabled: ${ENCRYPTION_ENABLED:false}          # Disable for now (enable later if needed)
+
+# Logging Configuration
+logging:
+  level:
+    com.harsh.chat: INFO                         # Only log INFO and above
+    org.springframework.web: INFO
+    org.springframework.web.socket: INFO
+    org.springframework.security: INFO
+  file:
+    name: /tmp/logs/quicktalk.log                 # Log file location
+    max-size: 10MB                                 # Maximum log file size
+    max-history: 7                                  # Keep 7 days of logs
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"    # Simple console format
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"

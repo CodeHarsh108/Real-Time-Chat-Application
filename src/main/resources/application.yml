@@ -20,6 +20,11 @@ spring:
       enabled: true
       file-size-threshold: 2KB
       location: ${java.io.tmpdir}
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
+  config:
+    activate:
+      on-profile: dev
 
 file:
   upload-dir: ./uploads
@@ -109,3 +114,5 @@ encryption:
   master-key: ${ENCRYPTION_MASTER_KEY:MySuperSecretMasterKeyForEncryption2026!ChangeThisInProduction}
   algorithm: AES/GCM/NoPadding
   key-size: 256
+
+

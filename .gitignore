@@ -1,5 +1,6 @@
 HELP.md
 target/
+*.class
 .mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/
@@ -14,10 +15,38 @@ target/
 .sts4-cache
 
 ### IntelliJ IDEA ###
-.idea
+.idea/
+*.iml
+.classpath
+.project
+.settings/
+.vscode/
+
 *.iws
 *.iml
 *.ipr
+
+logs/
+*.log
+
+uploads/
+/tmp/
+
+application-dev.yml
+application-local.yml
+.env
+*.env
+
+.DS_Store
+Thumbs.db
+
+*.jar
+*.war
+*.ear
+
+test-output/
+
+dependency-reduced-pom.xml
 
 ### NetBeans ###
 /nbproject/private/
@@ -29,5 +58,4 @@ build/
 !**/src/main/**/build/
 !**/src/test/**/build/
 
-### VS Code ###
-.vscode/
+

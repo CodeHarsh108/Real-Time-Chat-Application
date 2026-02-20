@@ -31,6 +31,9 @@ public class EncryptionService {
 
     private SecretKey masterKey;
 
+    @Value("${encryption.enabled:false}")
+    private boolean encryptionEnabled;
+
     // 🔥 FIX 2: Default constructor (don't log here, masterKeySecret not injected yet)
     public EncryptionService() {
         // Don't log here - dependencies not injected yet
@@ -83,18 +86,7 @@ public class EncryptionService {
         }
     }
 
-    /**
-     * Get or create room key
-     */
-    private SecretKey getRoomKey(String roomId) {
-        SecretKey key = roomKeys.get(roomId);
-        if (key == null) {
-            log.debug("Room key not found for {}, generating new one", roomId);
-            key = generateAndStoreRoomKey(roomId);
-            roomKeys.put(roomId, key);
-        }
-        return key;
-    }
+
 
     /**
      * Generate and store room key
@@ -258,4 +250,21 @@ public class EncryptionService {
         roomKeys.remove(roomId);
         log.debug("Removed room key for: {}", roomId);
     }
+
+    public boolean isEnabled() {
+        return encryptionEnabled;
+    }
+    private SecretKey getRoomKey(String roomId) {
+        if (!encryptionEnabled) {
+            throw new RuntimeException("Encryption is disabled");
+        }
+
+        SecretKey key = roomKeys.get(roomId);
+        if (key == null) {
+            log.error("Room key not found for {}! Available rooms: {}", roomId, roomKeys.keySet());
+            throw new RuntimeException("Room key not found for: " + roomId);
+        }
+        return key;
+    }
+
 }

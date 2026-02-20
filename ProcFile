@@ -1,0 +1,2 @@
+# Procfile - Tells Render how to run your app
+web: java -Dserver.port=$PORT -Dspring.profiles.active=prod -jar target/quicktalk.jar
