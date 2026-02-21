@@ -54,6 +54,9 @@ redis:
 cors:
   allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173,https://quicktalk-frontend.vercel.app}   # Your frontend URL (e.g., https://quicktalk.vercel.app)
 
+websocket:
+  allowed-origins: ${WEBSOCKET_ALLOWED_ORIGINS:${cors.allowed-origins}}
+
 # File Storage - Use /tmp for cloud deployments (ephemeral storage)
 file:
   upload-dir: /tmp/uploads                     # Files will be stored here temporarily
