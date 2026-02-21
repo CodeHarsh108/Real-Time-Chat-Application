@@ -43,13 +43,17 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
+        String[] origins = allowedOrigin.split(",");
         registry.addEndpoint("/chat")
-                .setAllowedOrigins(allowedOrigin)
+                .setAllowedOrigins(origins)
                 .withSockJS()
                 .setClientLibraryUrl("https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js")
                 .setHeartbeatTime(25000)
                 .setDisconnectDelay(5000)
                 .setWebSocketEnabled(true);
+
+        registry.addEndpoint("/chat")
+                .setAllowedOrigins(origins);
     }
 
     @Override

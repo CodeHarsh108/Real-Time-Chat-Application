@@ -36,6 +36,7 @@ public class SecurityConfig {
                         // Public endpoints
                         .requestMatchers("/api/v1/auth/**").permitAll()
                         .requestMatchers("/api/health/**").permitAll()
+                        .requestMatchers("/api/health/ping").permitAll()
                         .requestMatchers("/api/v1/auth/register").permitAll()
                         .requestMatchers("/api/v1/auth/login").permitAll()
                         .requestMatchers("/api/v1/auth/refresh").permitAll()
@@ -43,6 +44,7 @@ public class SecurityConfig {
                         // WebSocket endpoints
                         .requestMatchers("/ws/**").permitAll()
                         .requestMatchers("/chat/**").permitAll()
+                        .requestMatchers("/ws-info/**").permitAll()
 
                         .requestMatchers("/api/v1/attachments/view/**").permitAll()
                         .requestMatchers("/api/files/**").permitAll()

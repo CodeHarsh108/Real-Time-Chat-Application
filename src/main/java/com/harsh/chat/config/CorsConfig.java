@@ -36,7 +36,12 @@ public class CorsConfig {
                 "Accept",
                 "Origin",
                 "Access-Control-Request-Method",
-                "Access-Control-Request-Headers"
+                "Access-Control-Request-Headers",
+                "Upgrade",
+                "Connection",
+                "Sec-WebSocket-Key",
+                "Sec-WebSocket-Version",
+                "Sec-WebSocket-Extensions"
         ));
         configuration.setExposedHeaders(Arrays.asList(
                 "Access-Control-Allow-Origin",

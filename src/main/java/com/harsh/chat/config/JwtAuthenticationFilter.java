@@ -43,6 +43,20 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     ) throws ServletException, IOException {
 
         final String requestPath = request.getServletPath();
+
+        if (requestPath.startsWith("/chat") ||
+                requestPath.startsWith("/ws") ||
+                requestPath.startsWith("/ws-info") ||
+                requestPath.contains("/chat/") ||
+                requestPath.startsWith("/api/v1/attachments/view/") ||
+                requestPath.startsWith("/api/health") ||
+                requestPath.startsWith("/api/v1/auth")) {
+
+            log.debug("Skipping JWT filter for public endpoint: {}", requestPath);
+            filterChain.doFilter(request, response);
+            return;
+        }
+
         final String authHeader = request.getHeader("Authorization");
 
         log.debug("Processing request: {} {}", request.getMethod(), requestPath);
